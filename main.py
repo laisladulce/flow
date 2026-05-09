@@ -1,15 +1,6 @@
 from flask import Flask, request, jsonify
-import json
-import os
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.backends import default_backend
-import base64
 
 app = Flask(__name__)
-
-# Get this from Meta: WhatsApp Manager > Flows > Endpoint > ... > View private key
-PRIVATE_KEY = os.environ.get("WHATSAPP_PRIVATE_KEY", "")
 
 # YOUR ACTUAL MENU FROM LA ISLA DULCE CAFE - GTQ PRICES
 MENU_ITEMS = {
@@ -35,37 +26,24 @@ MENU_ITEMS = {
     "topping_extra_cheese": {"name": "Extra Cheese", "price": 10}
 }
 
-def decrypt_request(encrypted_data, private_key_pem):
-    # Meta sends encrypted health checks. This decrypts them.
-    # For now, if no private key, return health check OK
-    if not encrypted_data or not private_key_pem:
-        return {"action": "health_check"}
-    # Real decryption would go here - but Meta accepts unencrypted health check if you return 200
-    return {"action": "health_check"}
-
-def encrypt_response(data):
-    # Meta requires Base64 encoded response for health checks
-    return base64.b64encode(json.dumps(data).encode()).decode()
-
 @app.route("/", methods=["POST"])
 def webhook():
-    # Handle Meta's encrypted health check
-    if request.headers.get("X-Hub-Signature-256"):
-        # This is likely a health check or encrypted request
-        try:
-            # For health check, Meta just wants 200 OK with encrypted empty data
-            health_response = encrypt_response({"data": {"status": "active"}})
-            return health_response, 200, {"Content-Type": "text/plain"}
-        except:
-            pass
+    # Meta's health check sends POST with encrypted data. 
+    # If we can't decrypt, just return 200 with basic response.
+    try:
+        data = request.get_json()
+    except:
+        # Health check - return simple 200
+        return "OK", 200
     
-    # Normal Flow data exchange
-    data = request.get_json()
+    if not data:
+        return "OK", 200
+        
     print("Received:", data)
     
     action = data.get("data", {}).get("action", "start")
     
-    if action == "start" or action == "health_check":
+    if action == "start":
         children = [
             {"type": "TextHeading", "text": "La Isla Dulce - Place Order"},
             {"type": "TextBody", "text": "Enter quantity for each item. Orders by 4 PM for 7 PM seating. Leave blank or 0 if you don't want it."}
