@@ -1,4 +1,6 @@
 from flask import Flask, request, jsonify
+import base64
+import json
 
 app = Flask(__name__)
 
@@ -26,21 +28,22 @@ MENU_ITEMS = {
     "topping_extra_cheese": {"name": "Extra Cheese", "price": 10}
 }
 
+def make_response(payload):
+    # Meta requires ALL responses to be Base64 encoded
+    return base64.b64encode(json.dumps(payload).encode()).decode()
+
 @app.route("/", methods=["POST"])
 def webhook():
-    # Meta's health check sends POST with encrypted data. 
-    # If we can't decrypt, just return 200 with basic response.
     try:
         data = request.get_json()
     except:
-        # Health check - return simple 200
-        return "OK", 200
+        # Health check with no JSON body
+        return make_response({"data": {"status": "active"}}), 200, {"Content-Type": "text/plain"}
     
     if not data:
-        return "OK", 200
-        
-    print("Received:", data)
+        return make_response({"data": {"status": "active"}}), 200, {"Content-Type": "text/plain"}
     
+    print("Received:", data)
     action = data.get("data", {}).get("action", "start")
     
     if action == "start":
@@ -66,14 +69,15 @@ def webhook():
             }
         })
         
-        return jsonify({
+        payload = {
             "screen": "CART",
             "data": {},
             "layout": {
                 "type": "SingleColumnLayout",
                 "children": children
             }
-        })
+        }
+        return make_response(payload), 200, {"Content-Type": "text/plain"}
     
     elif action == "review":
         order_data = data.get("data", {})
@@ -97,7 +101,7 @@ def webhook():
         else:
             order_text = "\n".join(order_lines) + f"\n\nTotal: GTQ {total}"
         
-        return jsonify({
+        payload = {
             "screen": "REVIEW",
             "data": {"order_summary": order_text},
             "layout": {
@@ -115,15 +119,17 @@ def webhook():
                     }
                 ]
             }
-        })
+        }
+        return make_response(payload), 200, {"Content-Type": "text/plain"}
     
     elif action == "submit":
-        return jsonify({
+        payload = {
             "screen": "DONE",
             "data": {}
-        })
+        }
+        return make_response(payload), 200, {"Content-Type": "text/plain"}
     
-    return jsonify({"screen": "MENU", "data": {}})
+    return make_response({"screen": "MENU", "data": {}}), 200, {"Content-Type": "text/plain"}
 
 @app.route("/", methods=["GET"])
 def health():
