@@ -2,24 +2,39 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# YOUR MENU - NO EXTRAS ADDED
+# YOUR ACTUAL MENU FROM LA ISLA DULCE CAFE - GTQ PRICES
 MENU_ITEMS = {
-    "steak_burger": {"name": "Steak Burger", "price": 8.00},
-    "chicken_burger": {"name": "Chicken Burger", "price": 7.50},
-    "fish_burger": {"name": "Fish Burger", "price": 8.50},
-    "veggie_burger": {"name": "Veggie Burger", "price": 7.00},
-    "fries": {"name": "Fries", "price": 3.00},
-    "onion_rings": {"name": "Onion Rings", "price": 3.50},
-    "coleslaw": {"name": "Coleslaw", "price": 2.50},
-    "coke": {"name": "Coke", "price": 2.00},
-    "sprite": {"name": "Sprite", "price": 2.00},
-    "water": {"name": "Water", "price": 1.50},
-    "chocolate_shake": {"name": "Chocolate Shake", "price": 4.00},
-    "vanilla_shake": {"name": "Vanilla Shake", "price": 4.00},
-    "strawberry_shake": {"name": "Strawberry Shake", "price": 4.00},
-    "ice_cream": {"name": "Ice Cream", "price": 3.00},
-    "brownie": {"name": "Brownie", "price": 3.50},
-    "apple_pie": {"name": "Apple Pie", "price": 4.00}
+    # CURRY
+    "curry_vegetarian": {"name": "Green Curry - Vegetarian", "price": 135},
+    "curry_chicken": {"name": "Green Curry - Chicken", "price": 135},
+    "curry_fish": {"name": "Green Curry - Fish", "price": 150},
+    
+    # CEVICHE
+    "robalo_ceviche": {"name": "Robalo Ceviche", "price": 130},
+    
+    # PASTA
+    "pasta_chicken_beef": {"name": "Fettuchine - Chicken/Beef", "price": 135},
+    "pasta_vegetarian": {"name": "Fettuchine - Vegetarian", "price": 120},
+    
+    # MAINS
+    "steak_diane": {"name": "Steak Diane", "price": 195},
+    "coq_au_vin": {"name": "Coq Au Vin", "price": 150},
+    "eggplant_parmigiana": {"name": "Eggplant Parmigiana", "price": 145},
+    
+    # PIZZA - ALL GTQ 115
+    "pizza_canadian": {"name": "Canadian Pizza", "price": 115},
+    "pizza_hawaiian": {"name": "Hawaiian Pizza", "price": 115},
+    "pizza_pepperoni": {"name": "Pepperoni Pizza", "price": 115},
+    "pizza_isla_vegetarian": {"name": "La Isla Vegetarian Pizza", "price": 115},
+    "pizza_isla_mediterranean": {"name": "La Isla Mediterranean Pizza", "price": 115},
+    
+    # ADDITIONAL TOPPINGS
+    "topping_tomatoes": {"name": "Extra Tomatoes", "price": 10},
+    "topping_pineapple": {"name": "Extra Pineapple", "price": 10},
+    "topping_jalapeno": {"name": "Extra Jalapeno Pepper", "price": 10},
+    "topping_mushrooms": {"name": "Extra Mushrooms", "price": 10},
+    "topping_red_onion": {"name": "Extra Red Onion", "price": 10},
+    "topping_extra_cheese": {"name": "Extra Cheese", "price": 10}
 }
 
 @app.route("/", methods=["POST"])
@@ -30,18 +45,16 @@ def webhook():
     action = data.get("data", {}).get("action", "start")
     
     if action == "start":
-        # First screen: Show menu with quantity inputs
         children = [
-            {"type": "TextHeading", "text": "Select your items"},
-            {"type": "TextBody", "text": "Enter quantity for each item. Leave blank or 0 if you don't want it."}
+            {"type": "TextHeading", "text": "La Isla Dulce - Place Order"},
+            {"type": "TextBody", "text": "Enter quantity for each item. Orders by 4 PM for 7 PM seating. Leave blank or 0 if you don't want it."}
         ]
         
-        # Add quantity input for each menu item
         for item_id, item in MENU_ITEMS.items():
             children.append({
                 "type": "TextInput",
                 "name": item_id,
-                "label": f"{item['name']} - ${item['price']:.2f}",
+                "label": f"{item['name']} - GTQ {item['price']}",
                 "input-type": "number"
             })
         
@@ -64,10 +77,9 @@ def webhook():
         })
     
     elif action == "review":
-        # Calculate order total
         order_data = data.get("data", {})
         order_lines = []
-        total = 0.0
+        total = 0
         
         for item_id, item in MENU_ITEMS.items():
             qty_str = order_data.get(item_id, "0")
@@ -79,12 +91,12 @@ def webhook():
             if qty > 0:
                 line_total = qty * item["price"]
                 total += line_total
-                order_lines.append(f"{qty}x {item['name']} - ${line_total:.2f}")
+                order_lines.append(f"{qty}x {item['name']} - GTQ {line_total}")
         
         if not order_lines:
             order_text = "No items selected."
         else:
-            order_text = "\n".join(order_lines) + f"\n\nTotal: ${total:.2f}"
+            order_text = "\n".join(order_lines) + f"\n\nTotal: GTQ {total}"
         
         return jsonify({
             "screen": "REVIEW",
@@ -107,13 +119,11 @@ def webhook():
         })
     
     elif action == "submit":
-        # Final confirmation - closes the Flow
         return jsonify({
             "screen": "DONE",
             "data": {}
         })
     
-    # Default fallback
     return jsonify({"screen": "MENU", "data": {}})
 
 if __name__ == "__main__":
